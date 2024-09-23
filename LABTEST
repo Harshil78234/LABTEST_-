@@ -1,0 +1,60 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.signal import butter, filtfilt
+
+SAMPLES_PER_DAY = 1440  
+THRESHOLD_AQ = 200
+CONSECUTIVE_MINUTES = 10
+
+# Step 1
+np.random.seed(0)
+baseline_aqi = 50 + np.random.normal(0, 1, SAMPLES_PER_DAY).cumsum() / 20  
+noise = np.random.normal(0, 10, SAMPLES_PER_DAY)  
+aqi_readings = baseline_aqi + noise
+
+# Step 2
+b, a = butter(N=3, Wn=0.01, btype='low')  
+smoothed_aqi = filtfilt(b, a, aqi_readings)
+
+
+# Step 4
+plt.figure(figsize=(12, 6))
+plt.plot(aqi_readings, label='Noisy AQ Data', color='gray', alpha=0.5)
+plt.plot(smoothed_aqi, label='Smoothed AQ Data', color='blue')
+plt.scatter(range(0, SAMPLES_PER_DAY, 60), hourly_averages, color='red', label='Hourly Averages', zorder=5)
+plt.xlabel('Minutes')
+plt.ylabel('AQ')
+plt.title('AQ Data Analysis')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Step 5
+def find_exceeding_intervals(data, threshold, consecutive):
+    exceeding = data > threshold
+    intervals = []
+    start = None
+
+    for i in range(len(data)):
+        if exceeding[i]:
+            if start is None:
+                start = i
+        elif start is not None:
+            if i - start >= consecutive:
+                intervals.append((start, i - 1))
+            start = None
+
+    if start is not None and len(data) - start >= consecutive:
+        intervals.append((start, len(data) - 1))
+        
+    return intervals
+
+#main
+intervals = find_exceeding_intervals(smoothed_aqi, THRESHOLD_AQI, CONSECUTIVE_MINUTES)
+plt.figure(figsize=(12, 6))
+plt.plot(smoothed_aqi, label='Smoothed AQI Data', color='blue')
+plt.xlabel('Minutes')
+plt.ylabel('AQI')
+plt.title('High AQI Intervals Highlighted')
+plt.legend()
+plt.show()
